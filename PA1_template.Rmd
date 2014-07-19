@@ -1,0 +1,151 @@
+Assessment 1 Reproducible Research
+========================================================
+
+This is the Markdown document for the first Assignment of the course *Reproducible Research*
+
+## Loading and preprocessing the data
+
+This part is divided in two parts
+
+1 For loading the data we use the following code
+
+```{r}
+datos <- read.csv("activity.csv",header=T)
+
+```
+2 The date was processed converting tha date column as Date class
+
+```{r}
+datos$date <- as.Date(datos$date)
+
+```
+
+## What is mean total number of steps taken per day?
+
+For this part we ignore de NA's values  
+1 For the histogram of total number of step taken each day we first sum all the step for each day with
+ before we have load ggplot and plyr libraries by
+ 
+```{r,echo=TRUE,warning=FALSE}
+library(ggplot2)
+library(plyr)
+```
+
+
+```{r}
+stepday <-ddply(datos,"date", summarise,Nsteps=sum(steps))
+```
+
+
+and we obtain the histogram
+
+```{r fig.width=7, fig.height=6}
+qplot(x=date, y=Nsteps,data=stepday, geom="bar", stat="identity",position="dodge")
+
+```
+
+
+```{r}
+mean_st <- mean(stepday$Nsteps,na.rm=TRUE)
+mead_st <- median(stepday$Nsteps,na.rm=TRUE)
+```
+The mean of the total number of step is `r mean_st` and the median is `r mead_st`
+
+## What is the average daily activity pattern?  
+We calculated the average number of steps taken, averaged across all days with the code  
+
+```{r}
+intervalos <- ddply(datos,"interval",summarise,media_int=mean(steps,na.rm=TRUE))
+
+```
+
+Here we have the time series plot  of the 5-minute interval
+
+```{r,fig.width=7, fig.height=6}
+qplot(x=interval, y=media_int,data=intervalos,geom="line",stat="identity",position="dodge")
+
+```
+
+```{r}
+Nmax <-which.max(intervalos$media_int)
+Nint <- intervalos$interval[Nmax]
+```
+The interval that contains the maximum number of steps in average is `r Nint` 
+
+## Imputing missing values  
+```{r, echo=FALSE}
+num_na <- sum(is.na(datos$steps))
+
+```
+The total number of missing values in the dataset is  `r num_na`
+
+The strategy for filling the missing values in the dataset was take mean for the 5-minute interval and round for an integer and we use the following code  
+
+```{r}
+steps <- datos$steps
+M_steps <- matrix(steps,nrow=288,ncol=61)
+
+for (i in 1:61) {
+    nind <-which(is.na(M_steps[,i]))
+    if (length(nind !=0)) {
+        M_steps[nind,i]=round(intervalos$media_int[nind])
+    }
+    
+}
+
+```
+
+The new data created without NA's values is
+```{r}
+datos_no_NA <- data.frame(steps=c(M_steps),date=datos$date,interval=datos$interval)
+
+```
+
+and the histograms with NA's filled in
+
+```{r, echo=FALSE}
+stepday_NA <-ddply(datos_no_NA,"date", summarise,Nsteps=sum(steps))
+
+```
+
+```{r fig.width=7, fig.height=6}
+qplot(x=date, y=Nsteps,data=stepday_NA, geom="bar", stat="identity",position="dodge")
+```
+
+```{r, echo=FALSE}
+mean_NA <- mean(stepday_NA$Nsteps,na.rm=TRUE)
+med_NA <- median(stepday_NA$Nsteps,na.rm=TRUE)
+```
+
+The mean of the total number of step is without NA `r mean_NA` and the median is `r med_NA`
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+We have created a new variable in the data frame called **dayweek**  with this code  
+
+
+```{r,echo=FALSE}
+d_semana <- c("lunes","martes","miércoles","jueves","viernes","sábado","domingo")
+day <- weekdays(datos_no_NA$date)
+day <- factor(day,levels=d_semana)
+
+datos_no_NA$dayweek <- ifelse(as.numeric(day) <6, "weekday","weekend")
+w_semana <- as.factor(c("weekday","weekend"))
+datos_no_NA$dayweek <- factor(datos_no_NA$dayweek,levels=w_semana)
+
+weekday_data <- subset(datos_no_NA, dayweek=="weekday")
+weekend_data <- subset(datos_no_NA, dayweek=="weekend")
+
+intervalos_WD <- ddply(weekday_data,"interval",summarise,media_int=mean(steps,na.rm=TRUE))
+intervalos_WD$dayweek="weekday"
+intervalos_WE <- ddply(weekend_data,"interval",summarise,media_int=mean(steps,na.rm=TRUE))
+intervalos_WE$dayweek="weekend"
+intervalos_W <- rbind(intervalos_WD,intervalos_WE)
+
+```
+
+```{r}
+library(lattice)
+xyplot(media_int~interval | dayweek, data=intervalos_W,layout=c(2,1),type="l")
+
+```
