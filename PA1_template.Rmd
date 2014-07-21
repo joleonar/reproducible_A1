@@ -124,8 +124,8 @@ The mean of the total number of step is without NA `r mean_NA` and the median is
 We have created a new variable in the data frame called **dayweek**  with this code  
 
 
-```{r,echo=FALSE}
-d_semana <- c("lunes","martes","miércoles","jueves","viernes","sábado","domingo")
+```{r}
+d_semana <- c("lunes","martes","miï¿½rcoles","jueves","viernes","sï¿½bado","domingo")
 day <- weekdays(datos_no_NA$date)
 day <- factor(day,levels=d_semana)
 
